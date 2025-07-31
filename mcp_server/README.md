@@ -57,7 +57,9 @@ cd graphiti && pwd
 
 `docker compose up`
 
-3. Point your MCP client to `http://localhost:8000/sse`
+3. The server is now available at:
+   - HTTP API: `http://localhost:3000` (default)
+   - MCP endpoint: `http://localhost:3000/mcp`
 
 ## Installation
 
@@ -191,12 +193,28 @@ Or if you're using an older version of Docker Compose:
 docker-compose up
 ```
 
-This will start both the Neo4j database and the Graphiti MCP server. The Docker setup:
+This will start both the Neo4j database and the Graphiti MCP server. By default, the server runs with HTTP transport on port 3000.
+
+The Docker setup:
 
 - Uses `uv` for package management and running the server
 - Installs dependencies from the `pyproject.toml` file
+- **Default transport**: HTTP (RESTful API on port 3000)
+- **Alternative transports**: SSE (port 8000) or STDIO
+
+To use a different transport, create a `docker-compose.override.yml` file:
+
+```yaml
+services:
+  graphiti-mcp:
+    # For SSE transport:
+    command: ["uv", "run", "graphiti_mcp_server.py", "--transport", "sse"]
+    ports:
+      - "8000:8000"
+```
+
 - Connects to the Neo4j container using the environment variables
-- Exposes the server on port 8000 for HTTP-based SSE transport
+- Exposes the server on port 3000 for HTTP API (default) or port 8000 for SSE transport
 - Includes a healthcheck for Neo4j to ensure it's fully operational before starting the MCP server
 
 ## Integrating with MCP Clients
@@ -414,7 +432,7 @@ capabilities.
 
 ## Integrating with Claude Desktop (Docker MCP Server)
 
-The Graphiti MCP Server container uses the SSE MCP transport. Claude Desktop does not natively support SSE, so you'll need to use a gateway like `mcp-remote`.
+The Graphiti MCP Server container now uses HTTP transport by default, which provides better compatibility. For SSE transport, you'll need to use a gateway like `mcp-remote`.
 
 1.  **Run the Graphiti MCP server using SSE transport**:
 

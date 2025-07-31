@@ -1,0 +1,22 @@
+# Docker Compose Override Example
+# Copy this file to docker-compose.override.yml and modify as needed
+
+services:
+  graphiti-mcp:
+    # Example: Use SSE transport instead of HTTP
+    # command: ["uv", "run", "graphiti_mcp_server.py", "--transport", "sse"]
+    # ports:
+    #   - "8000:8000"
+    
+    # Example: Use STDIO transport (useful for debugging)
+    # command: ["uv", "run", "graphiti_mcp_server.py", "--transport", "stdio"]
+    # stdin_open: true
+    # tty: true
+    
+    # Example: Use HTTP transport with custom host/port
+    # command: ["uv", "run", "graphiti_mcp_server.py", "--transport", "http", "--host", "0.0.0.0", "--port", "8080"]
+    # ports:
+    #   - "8080:8080"
+    
+    # Example: Enable custom entities
+    # command: ["uv", "run", "graphiti_mcp_server.py", "--transport", "http", "--use-custom-entities"]
