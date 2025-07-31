@@ -10,4 +10,5 @@ dependencies = [
     "graphiti-core>=0.14.0",
     "azure-identity>=1.21.0",
     "graphiti-core",
+    "aiohttp>=3.8.0",  # For HTTP API testing and examples
 ]

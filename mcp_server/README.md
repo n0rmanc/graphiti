@@ -123,7 +123,7 @@ Available arguments:
 - `--model`: Overrides the `MODEL_NAME` environment variable.
 - `--small-model`: Overrides the `SMALL_MODEL_NAME` environment variable.
 - `--temperature`: Overrides the `LLM_TEMPERATURE` environment variable.
-- `--transport`: Choose the transport method (sse or stdio, default: sse)
+- `--transport`: Choose the transport method (sse, stdio, or http, default: sse)
 - `--group-id`: Set a namespace for the graph (optional). If not provided, defaults to "default".
 - `--destroy-graph`: If set, destroys all Graphiti graphs on startup.
 - `--use-custom-entities`: Enable entity extraction using the predefined ENTITY_TYPES
@@ -250,6 +250,99 @@ For SSE transport (HTTP-based), you can use this configuration:
     }
   }
 }
+```
+
+## HTTP API Usage
+
+The Graphiti MCP server also supports a RESTful HTTP API when running with `--transport http`. This allows direct HTTP access to all MCP tools without requiring an MCP client.
+
+### Starting the HTTP API Server
+
+```bash
+uv run graphiti_mcp_server.py --transport http --group-id my-project
+```
+
+The server will be available at `http://localhost:3000` by default.
+
+### Available HTTP Endpoints
+
+All endpoints return JSON responses and support CORS for browser-based applications.
+
+#### Memory Management
+
+- **POST** `/api/v1/memory/episodes` - Add a new memory episode
+  ```bash
+  curl -X POST http://localhost:3000/api/v1/memory/episodes \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Meeting Notes",
+      "episode_body": "Discussed project roadmap and timeline.",
+      "group_id": "my-project",
+      "source": "text",
+      "source_description": "team meeting"
+    }'
+  ```
+
+- **GET** `/api/v1/memory/episodes` - Retrieve recent episodes
+  ```bash
+  curl "http://localhost:3000/api/v1/memory/episodes?group_id=my-project&last_n=10"
+  ```
+
+- **DELETE** `/api/v1/memory/episodes/{uuid}` - Delete an episode
+  ```bash
+  curl -X DELETE http://localhost:3000/api/v1/memory/episodes/episode-uuid-here
+  ```
+
+#### Search Operations
+
+- **GET** `/api/v1/memory/nodes` - Search for nodes (entities)
+  ```bash
+  curl "http://localhost:3000/api/v1/memory/nodes?query=project roadmap&group_ids=my-project&max_nodes=5"
+  ```
+
+- **GET** `/api/v1/memory/facts` - Search for facts (relationships)
+  ```bash
+  curl "http://localhost:3000/api/v1/memory/facts?query=timeline discussion&group_ids=my-project&max_facts=5"
+  ```
+
+#### Entity Management
+
+- **GET** `/api/v1/memory/edges/{uuid}` - Get an entity edge by UUID
+  ```bash
+  curl http://localhost:3000/api/v1/memory/edges/edge-uuid-here
+  ```
+
+- **DELETE** `/api/v1/memory/edges/{uuid}` - Delete an entity edge
+  ```bash
+  curl -X DELETE http://localhost:3000/api/v1/memory/edges/edge-uuid-here
+  ```
+
+#### System Operations
+
+- **GET** `/api/v1/status` - Check server status
+  ```bash
+  curl http://localhost:3000/api/v1/status
+  ```
+
+- **DELETE** `/api/v1/graph` - Clear the entire graph (⚠️ destructive operation)
+  ```bash
+  curl -X DELETE http://localhost:3000/api/v1/graph
+  ```
+
+### HTTP API Client Example
+
+A Python client example is provided in `http_api_example.py`:
+
+```bash
+uv run http_api_example.py
+```
+
+### Testing the HTTP API
+
+Use the provided test script to verify all endpoints:
+
+```bash
+uv run test_http_api.py
 ```
 
 ## Available Tools

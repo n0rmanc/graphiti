@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from openai import AsyncAzureOpenAI
 from pydantic import BaseModel, Field
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+import json
 
 from graphiti_core import Graphiti
 from graphiti_core.edges import EntityEdge
@@ -1159,6 +1162,141 @@ async def get_status() -> StatusResponse:
         )
 
 
+# HTTP API Routes
+# These routes provide RESTful API access to the MCP tools for HTTP clients
+
+@mcp.custom_route('/api/v1/memory/episodes', methods=['POST'])
+async def api_add_memory(request: Request) -> JSONResponse:
+    """POST /api/v1/memory/episodes → add_memory"""
+    try:
+        body = await request.json()
+        result = await add_memory(
+            name=body.get('name', ''),
+            episode_body=body.get('episode_body', ''),
+            group_id=body.get('group_id'),
+            source=body.get('source', 'text'),
+            source_description=body.get('source_description', ''),
+            uuid=body.get('uuid')
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/memory/nodes', methods=['GET'])
+async def api_search_memory_nodes(request: Request) -> JSONResponse:
+    """GET /api/v1/memory/nodes → search_memory_nodes"""
+    try:
+        query_params = request.query_params
+        query = query_params.get('query', '')
+        group_ids = query_params.getlist('group_ids') if 'group_ids' in query_params else None
+        max_nodes = int(query_params.get('max_nodes', 10))
+        center_node_uuid = query_params.get('center_node_uuid')
+        entity = query_params.get('entity', '')
+        
+        result = await search_memory_nodes(
+            query=query,
+            group_ids=group_ids,
+            max_nodes=max_nodes,
+            center_node_uuid=center_node_uuid,
+            entity=entity
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/memory/facts', methods=['GET'])
+async def api_search_memory_facts(request: Request) -> JSONResponse:
+    """GET /api/v1/memory/facts → search_memory_facts"""
+    try:
+        query_params = request.query_params
+        query = query_params.get('query', '')
+        group_ids = query_params.getlist('group_ids') if 'group_ids' in query_params else None
+        max_facts = int(query_params.get('max_facts', 10))
+        center_node_uuid = query_params.get('center_node_uuid')
+        
+        result = await search_memory_facts(
+            query=query,
+            group_ids=group_ids,
+            max_facts=max_facts,
+            center_node_uuid=center_node_uuid
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/memory/episodes', methods=['GET'])
+async def api_get_episodes(request: Request) -> JSONResponse:
+    """GET /api/v1/memory/episodes → get_episodes"""
+    try:
+        query_params = request.query_params
+        group_id = query_params.get('group_id')
+        last_n = int(query_params.get('last_n', 10))
+        
+        result = await get_episodes(
+            group_id=group_id,
+            last_n=last_n
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/memory/edges/{uuid}', methods=['DELETE'])
+async def api_delete_entity_edge(request: Request) -> JSONResponse:
+    """DELETE /api/v1/memory/edges/{uuid} → delete_entity_edge"""
+    try:
+        uuid = request.path_params['uuid']
+        result = await delete_entity_edge(uuid=uuid)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/memory/episodes/{uuid}', methods=['DELETE'])
+async def api_delete_episode(request: Request) -> JSONResponse:
+    """DELETE /api/v1/memory/episodes/{uuid} → delete_episode"""
+    try:
+        uuid = request.path_params['uuid']
+        result = await delete_episode(uuid=uuid)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/memory/edges/{uuid}', methods=['GET'])
+async def api_get_entity_edge(request: Request) -> JSONResponse:
+    """GET /api/v1/memory/edges/{uuid} → get_entity_edge"""
+    try:
+        uuid = request.path_params['uuid']
+        result = await get_entity_edge(uuid=uuid)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/graph', methods=['DELETE'])
+async def api_clear_graph(request: Request) -> JSONResponse:
+    """DELETE /api/v1/graph → clear_graph"""
+    try:
+        result = await clear_graph()
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+@mcp.custom_route('/api/v1/status', methods=['GET'])
+async def api_get_status(request: Request) -> JSONResponse:
+    """GET /api/v1/status → get_status"""
+    try:
+        result = await get_status()
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
 async def initialize_server() -> MCPConfig:
     """Parse CLI arguments and initialize the Graphiti server configuration."""
     global config
@@ -1173,7 +1311,7 @@ async def initialize_server() -> MCPConfig:
     )
     parser.add_argument(
         '--transport',
-        choices=['sse', 'stdio'],
+        choices=['sse', 'stdio', 'http'],
         default='sse',
         help='Transport to use for communication with the client. (default: sse)',
     )
@@ -1235,7 +1373,7 @@ async def run_mcp_server():
     # Initialize the server
     mcp_config = await initialize_server()
 
-    # Run the server with stdio transport for MCP in the same event loop
+    # Run the server with chosen transport in the same event loop
     logger.info(f'Starting MCP server with transport: {mcp_config.transport}')
     if mcp_config.transport == 'stdio':
         await mcp.run_stdio_async()
@@ -1244,6 +1382,11 @@ async def run_mcp_server():
             f'Running MCP server with SSE transport on {mcp.settings.host}:{mcp.settings.port}'
         )
         await mcp.run_sse_async()
+    elif mcp_config.transport == 'http':
+        logger.info(
+            f'Running MCP server with HTTP transport on {mcp.settings.host}:{mcp.settings.port}'
+        )
+        await mcp.run_streamable_http_async()
 
 
 def main():

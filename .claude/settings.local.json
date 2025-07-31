@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__graphiti-memory__search_memory_nodes",
+      "Bash(grep:*)",
+      "mcp__graphiti-memory__add_memory",
+      "Bash(uv run:*)"
+    ],
+    "deny": []
+  }
+}
